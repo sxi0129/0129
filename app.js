@@ -1,8 +1,64 @@
-{\rtf1\ansi\ansicpg949\cocoartf2866
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+import { db } from "./firebase.js";
+import { collection, addDoc, getDocs, serverTimestamp, orderBy, query } 
+from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-\f0\fs24 \cf0 dd}
+const postBtn = document.getElementById("postBtn");
+const postInput = document.getElementById("postInput");
+const postList = document.getElementById("postList");
+
+
+// 게시물 작성
+postBtn.addEventListener("click", async () => {
+    const text = postInput.value.trim();
+    if (text === "") return alert("내용을 입력하세요");
+
+    try {
+        await addDoc(collection(db, "posts"), {
+            text: text,
+            createdAt: serverTimestamp()
+        });
+
+        postInput.value = "";
+        loadPosts(); // 새로고침 없이 즉시 반영
+    } catch (err) {
+        console.error(err);
+    }
+});
+
+
+// 게시물 불러오기
+async function loadPosts() {
+    postList.innerHTML = "불러오는 중...";
+
+    const q = query(
+        collection(db, "posts"),
+        orderBy("createdAt", "desc")
+    );
+
+    const snapshot = await getDocs(q);
+
+    postList.innerHTML = ""; // 초기화
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+
+        // 작성 시간이 없으면 '방금 전'
+        const time = data.createdAt ? 
+                     data.createdAt.toDate().toLocaleString() : 
+                     "방금 전";
+
+        const div = document.createElement("div");
+        div.classList.add("postItem");
+
+        div.innerHTML = `
+            <p class="postText">${data.text}</p>
+            <span class="postTime">${time}</span>
+            <hr>
+        `;
+
+        postList.appendChild(div);
+    });
+}
+
+// 처음 사이트 들어오면 자동으로 불러오기
+loadPosts();
